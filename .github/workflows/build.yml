@@ -40,13 +40,12 @@ jobs:
           CONTAINER_TAG="${LOWERCASE_ARCH}-${LOWERCASE_BRANCH}"
           echo "Spinning up verification container: openwrt/sdk:$CONTAINER_TAG"
           
-          # Run a dry download block using the specific matrix SDK to trigger the OpenWrt hash checker.
+          # Run a dry download
           set +e
           docker run --rm \
             -v "$PWD:/feed" \
-            -w /feed \
             openwrt/sdk:$CONTAINER_TAG \
-            sh -c "ln -s /feed/it87-community package/it87-community && make package/it87-community/download V=s" > hash_check.log 2>&1
+            sh -c "cd \$BUILD_TOPDIR && ln -s /feed/it87-community package/it87-community && make package/it87-community/download V=s" > hash_check.log 2>&1
           set -e
           
           # Parse the hash warning string directly out of the build logs
