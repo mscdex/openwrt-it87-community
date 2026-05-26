@@ -66,7 +66,7 @@ jobs:
         run: |
           mkdir -p release_assets
           
-          CACHE_KEYS=$(gh api /repos/${{ github.repository }}/actions/caches?key=${PREFIX}&ref=${{ github.ref }} --paginate --jq '.actions_caches[].key' | grep "^${PREFIX}" || true)
+          CACHE_KEYS=$(gh api "/repos/${{ github.repository }}/actions/caches?key=${PREFIX}&ref=${{ github.ref }}" --paginate --jq '.actions_caches[].key' | grep "^${PREFIX}" || true)
           
           if [ -z "$CACHE_KEYS" ]; then
             echo "No matching matrix caches found for: $PREFIX"
