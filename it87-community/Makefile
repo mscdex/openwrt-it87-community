@@ -21,7 +21,8 @@ define KernelPackage/hwmon-it87-community
   URL:=https://github.com/frankcrawford/it87.git
   FILES:=$(PKG_BUILD_DIR)/it87.ko
   AUTOLOAD:=$(call AutoProbe,it87)
-  DEPENDS:=+kmod-hwmon-core @TARGET_x86_64
+  # kmod-acpi-video is needed for WMI
+  DEPENDS:=+kmod-hwmon-core +kmod-acpi-video @TARGET_x86_64
 endef
 
 define KernelPackage/hwmon-it87-community/description
@@ -33,14 +34,6 @@ define Build/Compile
 		M="$(PKG_BUILD_DIR)" \
     EXTRA_CFLAGS="-Wno-error=unused-function" \
 		modules
-endef
-
-define KernelPackage/hwmon-it87-community/install
-	$(INSTALL_DIR) $(1)/lib/modules/$(LINUX_VERSION)
-	$(CP) $(PKG_BUILD_DIR)/it87.ko $(1)/lib/modules/$(LINUX_VERSION)/
-	# Trick the package indexing system into believing wmi.ko is provided locally
-	echo "wmi.ko" >> $(PKG_INFO_DIR)/kmod-hwmon-it87-community.provides
-	cat $(PKG_INFO_DIR)/kmod-hwmon-it87-community.provides
 endef
 
 $(eval $(call KernelPackage,hwmon-it87-community))
