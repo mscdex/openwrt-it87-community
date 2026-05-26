@@ -43,10 +43,10 @@ jobs:
           done
 
       - name: Temporarily Store Built Packages
-        uses: actions/upload-artifact@v7
+        uses: actions/cache/save@v5
         with:
-          name: assets-${{ matrix.arch }}-${{ matrix.branch }}
           path: staging_dir/*
+          key: openwrt-apk-${{ github.sha }}-${{ matrix.arch }}-${{ matrix.branch }}
 
   publish:
     name: Deploy to GitHub Releases
@@ -58,11 +58,13 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v6
 
-      - name: Download Compiled Artifacts
-        uses: actions/download-artifact@v8
+      - name: Retrieve Built Packages
+        uses: actions/cache/restore@v5
         with:
           path: release_assets
-          merge-multiple: true
+          key: openwrt-apk-${{ github.sha }}-
+          restore-keys: |
+            openwrt-apk-${{ github.sha }}-
 
       - name: Extract Version and Set Release Metadata
         id: meta
