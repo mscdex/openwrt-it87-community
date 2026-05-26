@@ -21,7 +21,7 @@ define KernelPackage/hwmon-it87-community
   URL:=https://github.com/frankcrawford/it87.git
   FILES:=$(PKG_BUILD_DIR)/it87.ko
   AUTOLOAD:=$(call AutoProbe,it87)
-  DEPENDS:=+kmod-hwmon-core +@KERNEL_WMI @TARGET_x86_64
+  DEPENDS:=+kmod-hwmon-core @TARGET_x86_64
 endef
 
 define KernelPackage/hwmon-it87-community/description
