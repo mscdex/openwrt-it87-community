@@ -44,8 +44,9 @@ jobs:
           set +e
           docker run --rm \
             -v "$PWD:/feed" \
+            -e TERM=xterm \
             openwrt/sdk:$CONTAINER_TAG \
-            sh -c "cd \$BUILD_TOPDIR && ln -s /feed/it87-community package/it87-community && make package/it87-community/download V=s" > hash_check.log 2>&1
+            sh -c "cd \$BUILD_TOPDIR && ln -s /feed/it87-community package/it87-community && make defconfig && make package/it87-community/download V=s" > hash_check.log 2>&1
           set -e
           
           # Parse the hash warning string directly out of the build logs
