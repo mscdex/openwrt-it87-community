@@ -37,7 +37,7 @@ jobs:
       - name: Rename and Prep APK Artifacts
         run: |
           mkdir -p staging_dir
-          find bin/ -type f \( -name "*.apk" -o -name "*.ipk" \) | while read -r file; do
+          find bin/ -type f -name "*kmod-hwmon-it87-community-*.apk" | while read -r file; do
             filename=$(basename "$file")
             cp "$file" "staging_dir/${{ matrix.arch }}-${{ matrix.branch }}-$filename"
           done
