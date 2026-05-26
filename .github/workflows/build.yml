@@ -23,7 +23,7 @@ jobs:
 
     steps:
       - name: Checkout Source Code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -44,7 +44,7 @@ jobs:
           done
 
       - name: Temporarily Store Built Packages
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         with:
           name: assets-${{ matrix.arch }}-${{ matrix.branch }}
           path: staging_dir/*
@@ -57,10 +57,10 @@ jobs:
       contents: write
     steps:
       - name: Checkout Source Code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
 
       - name: Download Compiled Artifacts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v4
         with:
           path: release_assets
           merge-multiple: true
