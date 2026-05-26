@@ -39,6 +39,7 @@ define KernelPackage/hwmon-it87-community/install
 	$(INSTALL_DIR) $(1)/lib/modules/$(LINUX_VERSION)
 	$(CP) $(PKG_BUILD_DIR)/it87.ko $(1)/lib/modules/$(LINUX_VERSION)/
 	# Trick the package indexing system into believing wmi.ko is provided locally
+	mkdir -p $(1)/CONTROL
 	echo "wmi.ko" > $(1)/CONTROL/provides
 endef
 
