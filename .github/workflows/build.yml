@@ -46,25 +46,41 @@ jobs:
         uses: actions/cache/save@v5
         with:
           path: staging_dir/*
-          key: openwrt-apk-${{ github.sha }}-${{ matrix.arch }}-${{ matrix.branch }}
+          key: openwrt-apk-${{ github.sha }}-${{ github.run_id }}-${{ matrix.arch }}-${{ matrix.branch }}
 
   publish:
     name: Deploy to GitHub Releases
     needs: build
     runs-on: ubuntu-latest
     permissions:
+      actions: read
       contents: write
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v6
 
       - name: Retrieve Built Packages
-        uses: actions/cache/restore@v5
-        with:
-          path: release_assets
-          key: openwrt-apk-${{ github.sha }}-
-          restore-keys: |
-            openwrt-apk-${{ github.sha }}-
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PREFIX: "openwrt-apk-${{ github.sha }}-${{ github.run_id }}-"
+        run: |
+          mkdir -p release_assets
+          
+          CACHE_KEYS=$(gh api /repos/${{ github.repository }}/actions/caches?key=${PREFIX}&ref=${{ github.ref }} --paginate --jq '.actions_caches[].key' | grep "^${PREFIX}" || true)
+          
+          if [ -z "$CACHE_KEYS" ]; then
+            echo "No matching matrix caches found for: $PREFIX"
+            exit 1
+          fi
+          
+          # Extension is needed to obtain direct download links
+          gh extension install actions/gh-actions-cache
+          
+          for KEY in $CACHE_KEYS; do
+            echo "Fetching cache entry: $KEY"
+            DOWNLOAD_URL=$(gh api /repos/${{ github.repository }}/actions/caches?key=$KEY --jq '.actions_caches[0].archive_url')
+            curl -L -H "Authorization: Bearer $GH_TOKEN" "$DOWNLOAD_URL" | tar -x -C release_assets/
+          done
 
       - name: Extract Version and Set Release Metadata
         id: meta
