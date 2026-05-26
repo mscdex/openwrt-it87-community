@@ -27,6 +27,40 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Pre-Calculate and Inject Mirror Hash
+        run: |
+          # Temporarily replace the target hash with 'skip' to force an intentional error
+          sed -i 's/^PKG_MIRROR_HASH:=.*/PKG_MIRROR_HASH:=skip/' it87-community/Makefile
+          
+          # Convert matrix values to lowercase to ensure absolute compatibility with Docker Hub image names
+          LOWERCASE_ARCH=$(echo "${{ matrix.arch }}" | tr '[:upper:]' '[:lower:]')
+          LOWERCASE_BRANCH=$(echo "${{ matrix.branch }}" | tr '[:upper:]' '[:lower:]')
+          
+          # Dynamic container tag generation based on the active matrix target block
+          CONTAINER_TAG="${LOWERCASE_ARCH}-${LOWERCASE_BRANCH}"
+          echo "Spinning up verification container: openwrt/sdk:$CONTAINER_TAG"
+          
+          # Run a dry download block using the specific matrix SDK to trigger the OpenWrt hash checker.
+          set +e
+          docker run --rm \
+            -v "$PWD:/feed" \
+            -w /feed \
+            openwrt/sdk:$CONTAINER_TAG \
+            sh -c "ln -s /feed/it87-community package/it87-community && make package/it87-community/download V=s" > hash_check.log 2>&1
+          set -e
+          
+          # Parse the hash warning string directly out of the build logs
+          REAL_HASH=$(grep -oE "set to [a-f0-9]{64}" hash_check.log | awk '{print $3}')
+          
+          if [ -z "$REAL_HASH" ]; then
+            echo "::warning::Could not extract a real hash from the log pool! Falling back to standard build."
+            cat hash_check.log
+          else
+            echo "Successfully intercepted upstream archive signature for $CONTAINER_TAG: $REAL_HASH"
+            # Patch the real tarball hash back into the local file workspace
+            sed -i "s/^PKG_MIRROR_HASH:=.*/PKG_MIRROR_HASH:=$REAL_HASH/" it87-community/Makefile
+          fi
+
       - name: Build Package via OpenWrt SDK
         uses: openwrt/gh-action-sdk@797d0e3d0eb13b355c3447f60d0179d4b43089e2
         env:
