@@ -29,10 +29,12 @@ define KernelPackage/hwmon-it87-community/description
 endef
 
 define Build/Compile
-	-$(KERNEL_MAKE) \
+	$(KERNEL_MAKE) \
 		M="$(PKG_BUILD_DIR)" \
     EXTRA_CFLAGS="-Wno-error=unused-function" \
 		modules
 endef
+
+MAKE_FLAGS += -i
 
 $(eval $(call KernelPackage,hwmon-it87-community))
