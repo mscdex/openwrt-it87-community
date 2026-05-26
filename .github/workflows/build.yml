@@ -1,0 +1,107 @@
+name: Build and Release it87-community OpenWrt APK Package
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  build:
+    name: Build for ${{ matrix.arch }}-${{ matrix.branch }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      arch: ${{ matrix.arch }}
+      branch: ${{ matrix.branch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            branch: 25.12.4
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build Package via OpenWrt SDK
+        uses: openwrt/gh-action-sdk@797d0e3d0eb13b355c3447f60d0179d4b43089e2
+        env:
+          ARCH: ${{ matrix.arch }}-${{ matrix.branch }}
+          PACKAGES: it87-community
+          V: s
+
+      - name: Rename and Prep APK Artifacts
+        run: |
+          mkdir -p staging_dir
+          find bin/packages/ -type f \( -name "*.apk" -o -name "*.ipk" \) | while read -r file; do
+            filename=$(basename "$file")
+            cp "$file" "staging_dir/${{ matrix.arch }}-${{ matrix.branch }}-$filename"
+          done
+
+      - name: Temporarily Store Built Packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: assets-${{ matrix.arch }}-${{ matrix.branch }}
+          path: staging_dir/*
+
+  publish:
+    name: Deploy to GitHub Releases
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Download Compiled Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release_assets
+          merge-multiple: true
+
+      - name: Extract Version and Set Release Metadata
+        id: meta
+        run: |
+          RAW_SRC_VERSION=$(grep -m 1 '^PKG_SOURCE_VERSION:=' it87-community/Makefile | cut -d'=' -f2 | tr -d '[:space:]')
+          RELEASE=$(grep -m 1 '^PKG_RELEASE:=' it87-community/Makefile | cut -d'=' -f2 | tr -d '[:space:]')
+          
+          if [ -z "$RAW_SRC_VERSION" ]; then
+            echo "::error::Could not extract PKG_SOURCE_VERSION from Makefile!"
+            exit 1
+          fi
+          
+          if [ ${#RAW_SRC_VERSION} -eq 40 ]; then
+            VERSION=$(echo "$RAW_SRC_VERSION" | cut -c1-12)
+          else
+            VERSION="$RAW_SRC_VERSION"
+          fi
+          
+          TARGET_ARCH="${{ needs.build.outputs.arch }}"
+          TARGET_BRANCH="${{ needs.build.outputs.branch }}"
+          
+          TAG_NAME="${VERSION}-${RELEASE}-${TARGET_ARCH}-${TARGET_BRANCH}"
+          RELEASE_TITLE="it87-community driver ${VERSION}-${RELEASE} (${TARGET_ARCH} for ${TARGET_BRANCH})"
+          
+          echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
+          echo "RELEASE_TITLE=$RELEASE_TITLE" >> $GITHUB_ENV
+
+      - name: Create Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Verifying release availability for $TAG_NAME..."
+          if gh release view "$TAG_NAME" >/dev/null 2>&1; then
+            echo "::error::Release $TAG_NAME already exists! Terminating build to protect current release assets."
+            exit 1
+          fi
+
+          echo "Publishing fresh production artifacts..."
+          gh release create "$TAG_NAME" release_assets/* \
+            --title "$RELEASE_TITLE" \
+            --notes "" \
+            --target "$GITHUB_SHA"
