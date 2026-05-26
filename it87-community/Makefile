@@ -9,8 +9,6 @@ PKG_SOURCE_PROTO:=git
 PKG_SOURCE_DATE:=2026-04-16
 PKG_SOURCE_VERSION:=20f2f2f4c92c14fcdd26f60d050e693ad2c30bf8
 PKG_MIRROR_HASH:=8dc63c90370e6f24947020df88c8835d86e85e747d5b627931601ed71c613e4e
-# Bypass wmi.ko dependency issue
-PKG_EXTMOD_DEPENDS:=
 
 PKG_LICENSE:=GPL-2.0
 PKG_LICENSE_FILES:=COPYING
@@ -23,7 +21,7 @@ define KernelPackage/hwmon-it87-community
   URL:=https://github.com/frankcrawford/it87.git
   FILES:=$(PKG_BUILD_DIR)/it87.ko
   AUTOLOAD:=$(call AutoProbe,it87)
-  DEPENDS:=+kmod-hwmon-core @TARGET_x86_64
+  DEPENDS:=+kmod-hwmon-core +@KERNEL_WMI @TARGET_x86_64
 endef
 
 define KernelPackage/hwmon-it87-community/description
