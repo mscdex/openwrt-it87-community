@@ -30,7 +30,7 @@ jobs:
       - name: Pre-Calculate and Inject Mirror Hash
         run: |
           # Clear out any pre-existing hash setting to trigger an unconfigured verification mismatch warning
-          sed -i 's/^PKG_MIRROR_HASH:=.*/PKG_MIRROR_HASH:=/' it87-community/Makefile
+          sed -i '/^PKG_MIRROR_HASH/d' it87-community/Makefile
           
           # Convert matrix values to lowercase for Docker registry compatibility
           LOWERCASE_ARCH=$(echo "${{ matrix.arch }}" | tr '[:upper:]' '[:lower:]')
@@ -57,7 +57,7 @@ jobs:
           else
             echo "Successfully intercepted upstream archive signature for $CONTAINER_TAG: $REAL_HASH"
             # Patch the real tarball hash back into the local file workspace
-            sed -i "s/^PKG_MIRROR_HASH:=.*/PKG_MIRROR_HASH:=$REAL_HASH/" it87-community/Makefile
+            sed -i "/^PKG_SOURCE_VERSION:=.*/a PKG_MIRROR_HASH:=$REAL_HASH" it87-community/Makefile
           fi
 
       - name: Build Package via OpenWrt SDK
