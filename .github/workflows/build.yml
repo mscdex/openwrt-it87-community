@@ -33,7 +33,6 @@ jobs:
           ARCH: ${{ matrix.arch }}-${{ matrix.branch }}
           PACKAGES: it87-community
           V: s
-          IGNORE_ERRORS: m
 
       - name: Rename and Prep APK Artifacts
         run: |
