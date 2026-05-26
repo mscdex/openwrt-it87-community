@@ -24,16 +24,12 @@ define KernelPackage/hwmon-it87-community
   DEPENDS:=+kmod-hwmon-core @TARGET_x86_64
 endef
 
-define KernelPackage/hwmon-it87-community/extra_provides
-	echo "wmi.ko"
-endef
-
 define KernelPackage/hwmon-it87-community/description
   A community fork of the IT87 hardware monitoring driver supporting newer ITE Super I/O chips.
 endef
 
 define Build/Compile
-	$(KERNEL_MAKE) \
+	-$(KERNEL_MAKE) \
 		M="$(PKG_BUILD_DIR)" \
     EXTRA_CFLAGS="-Wno-error=unused-function" \
 		modules
