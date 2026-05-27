@@ -61,6 +61,7 @@ jobs:
 
       - name: Retrieve Built Packages
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PREFIX: "openwrt-apk-${{ github.sha }}-${{ github.run_id }}-"
           ACTIONS_CACHE_URL: ${{ secrets.ACTIONS_CACHE_URL }}
           ACTIONS_RUNTIME_TOKEN: ${{ secrets.ACTIONS_RUNTIME_TOKEN }}
