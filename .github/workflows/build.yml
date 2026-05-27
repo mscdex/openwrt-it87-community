@@ -99,12 +99,27 @@ jobs:
               for (const item of cachesFound) {
                 core.info(`Processing cache key: ${item.key}`);
                 
-                const matchedKey = await cache.restoreCache([targetMainDir], item.key);
+                fs.rmSync('staging_dir', { recursive: true, force: true });
                 
-                if (matchedKey)
-                  core.info(`Successfully retrieved cache for: ${item.key}`);
-                else
+                const matchedKey = await cache.restoreCache(['staging_dir/*'], item.key);
+                
+                if (matchedKey) {
+                  let didSomething = false;
+                  if (fs.existsSync('staging_dir')) {
+                    for (const fileName of fs.readdirSync('staging_dir')) {
+                      const srcPath = path.join('staging_dir', fileName);
+                      const destPath = path.join(targetMainDir, fileName);
+                      fs.renameSync(srcPath, destPath);
+                      didSomething = true;
+                    }
+                  }
+                  if (didSomething)
+                    core.info(`Successfully retrieved cache for: ${item.key}`);
+                  else
+                    core.warning(`Retrieved incomplete cache for: ${item.key}`);
+                } else {
                   core.warning(`Failed to retrieve cache for: ${item.key}`);
+                }
               }
             } catch (ex) {
               core.setFailed(`Exception while retrieving caches: ${ex.stack}`);
