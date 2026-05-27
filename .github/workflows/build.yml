@@ -69,7 +69,7 @@ jobs:
           TARGET_DIR: "release_assets"
         with:
           script: |
-            const cache = require('@actions/cache');
+            const cache = await import('@actions/cache');
             const fs = require('fs');
             const path = require('path');
             
