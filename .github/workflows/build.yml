@@ -59,47 +59,63 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v6
 
+      - name: Install Cache Module
+        run: npm install @actions/cache
+
       - name: Retrieve Built Packages
+        uses: actions/github-script@v9
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PREFIX: "openwrt-apk-${{ github.sha }}-${{ github.run_id }}-"
-          ACTIONS_CACHE_URL: ${{ secrets.ACTIONS_CACHE_URL }}
-          ACTIONS_RUNTIME_TOKEN: ${{ secrets.ACTIONS_RUNTIME_TOKEN }}
-        run: |
-          mkdir -p release_assets
-          
-          CACHE_KEYS=$(gh api "/repos/${{ github.repository }}/actions/caches?key=${PREFIX}&ref=${{ github.ref }}" --paginate --jq '.actions_caches[].key' | grep "^${PREFIX}" || true)
-          
-          if [ -z "$CACHE_KEYS" ]; then
-            echo "No matching matrix caches found for: $PREFIX"
-            exit 1
-          fi
-          
-          for KEY in "${CACHE_KEYS[@]}"; do
-            echo "Fetching cache entry: $KEY"
+          CACHE_PREFIX: "openwrt-apk-${{ github.sha }}-${{ github.run_id }}-"
+          TARGET_DIR: "release_assets"
+        with:
+          script: |
+            const cache = require('@actions/cache');
+            const fs = require('fs');
+            const path = require('path');
             
-            RESPONSE=$(curl -s -H "Authorization: Bearer $ACTIONS_RUNTIME_TOKEN" \
-              -H "Accept: application/json;api-version=6.0-preview.1" \
-              "${ACTIONS_CACHE_URL}_apis/artifactcache/cache?keys=$KEY")
+            const prefix = process.env.CACHE_PREFIX;
+            const targetMainDir = process.env.TARGET_DIR;
             
-            ARCHIVE_URL=$(echo "$RESPONSE" | jq -r '.archiveLocation // empty')
-            
-            if [ -z "$ARCHIVE_URL" ] || [ "$ARCHIVE_URL" = "null" ]; then
-              echo "Key or archive URL for key not found for: $KEY"
-              continue
-            fi
-            
-            curl -L "$ARCHIVE_URL" | tar -x -C release_assets/
-          done
-          
-          if [ -n "$(find release_assets -maxdepth 0 -empty)" ]; then
-            echo "No packages to release"
-            exit 1
-          fi
+            try {
+              const cacheListResponse = await github.rest.actions.getActionsCacheList({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                key: prefix,
+              });
+              
+              const cachesFound = cacheListResponse?.data?.actions_caches || [];
+              
+              if (!Array.isArray(cachesFound) || cachesFound.length === 0) {
+                core.setFailed('No matching caches found');
+                return;
+              }
+              
+              core.info(`Found ${cachesFound.length} cache(s) matching prefix "${prefix}"`);
+              
+              fs.mkdirSync(targetMainDir, { recursive: true });
+              
+              for (const item of cachesFound) {
+                core.info(`Processing cache key: ${item.key}`);
+                
+                const matchedKey = await cache.restoreCache([targetMainDir], item.key);
+                
+                if (matchedKey)
+                  core.info(`Successfully retrieved cache for: ${item.key}`);
+                else
+                  core.warning(`Failed to retrieve cache for: ${item.key}`);
+              }
+            } catch (ex) {
+              core.setFailed(`Exception while retrieving caches: ${ex.stack}`);
+            }
 
       - name: Extract Version and Set Release Metadata
         id: meta
         run: |
+          if [ -n "$(find release_assets -maxdepth 0 -empty)" ]; then
+            echo "No packages to release"
+            exit 1
+          fi
+          
           RAW_SRC_VERSION=$(grep -m 1 '^PKG_SOURCE_VERSION:=' it87-community/Makefile | cut -d'=' -f2 | tr -d '[:space:]')
           RELEASE=$(grep -m 1 '^PKG_RELEASE:=' it87-community/Makefile | cut -d'=' -f2 | tr -d '[:space:]')
           
