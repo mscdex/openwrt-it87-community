@@ -61,8 +61,9 @@ jobs:
 
       - name: Retrieve Built Packages
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PREFIX: "openwrt-apk-${{ github.sha }}-${{ github.run_id }}-"
+          ACTIONS_CACHE_URL: ${{ secrets.ACTIONS_CACHE_URL }}
+          ACTIONS_RUNTIME_TOKEN: ${{ secrets.ACTIONS_RUNTIME_TOKEN }}
         run: |
           mkdir -p release_assets
           
@@ -73,14 +74,27 @@ jobs:
             exit 1
           fi
           
-          # Extension is needed to obtain direct download links
-          gh extension install actions/gh-actions-cache
-          
-          for KEY in $CACHE_KEYS; do
+          for KEY in "${CACHE_KEYS[@]}"; do
             echo "Fetching cache entry: $KEY"
-            DOWNLOAD_URL=$(gh api /repos/${{ github.repository }}/actions/caches?key=$KEY --jq '.actions_caches[0].archive_url')
-            curl -L -H "Authorization: Bearer $GH_TOKEN" "$DOWNLOAD_URL" | tar -x -C release_assets/
+            
+            RESPONSE=$(curl -s -H "Authorization: Bearer $ACTIONS_RUNTIME_TOKEN" \
+              -H "Accept: application/json;api-version=6.0-preview.1" \
+              "${ACTIONS_CACHE_URL}_apis/artifactcache/cache?keys=$KEY")
+            
+            ARCHIVE_URL=$(echo "$RESPONSE" | jq -r '.archiveLocation // empty')
+            
+            if [ -z "$ARCHIVE_URL" ] || [ "$ARCHIVE_URL" = "null" ]; then
+              echo "Key or archive URL for key not found for: $KEY"
+              continue
+            fi
+            
+            curl -L "$ARCHIVE_URL" | tar -x -C release_assets/
           done
+          
+          if [ -n "$(find release_assets -maxdepth 0 -empty)" ]; then
+            echo "No packages to release"
+            exit 1
+          fi
 
       - name: Extract Version and Set Release Metadata
         id: meta
