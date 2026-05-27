@@ -69,9 +69,11 @@ jobs:
           TARGET_DIR: "release_assets"
         with:
           script: |
-            const cache = await import('@actions/cache');
             const fs = require('fs');
             const path = require('path');
+            
+            const cachePath = require.resolve('@actions/cache', { paths: [ process.cwd() ] });
+            const cache = await import(cachePath);
             
             const prefix = process.env.CACHE_PREFIX;
             const targetMainDir = process.env.TARGET_DIR;
