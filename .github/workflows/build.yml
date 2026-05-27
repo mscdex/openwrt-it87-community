@@ -25,7 +25,7 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v6
         with:
-          fetch-depth: 0
+          persist-credentials: false
 
       - name: Build Package via OpenWrt SDK
         uses: openwrt/gh-action-sdk@797d0e3d0eb13b355c3447f60d0179d4b43089e2
@@ -58,6 +58,8 @@ jobs:
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       - name: Install Cache Module
         run: npm install @actions/cache
