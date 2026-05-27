@@ -72,7 +72,7 @@ jobs:
             const fs = require('fs');
             const path = require('path');
             
-            const cachePath = path.resolve(process.cwd(), 'node_modules/@actions/cache');
+            const cachePath = path.resolve(process.cwd(), 'node_modules/@actions/cache/lib/cache.js')
             const cache = await import(cachePath);
             
             const prefix = process.env.CACHE_PREFIX;
