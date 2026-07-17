@@ -19,7 +19,7 @@ jobs:
       matrix:
         include:
           - arch: x86_64
-            branch: 25.12.4
+            branch: 25.12.5
 
     steps:
       - name: Checkout Source Code
